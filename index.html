@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Weather and Wind Speed</title>
+  <style>
+    #weather {
+      margin-top: 20px;
+    }
+    #forecast {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Weather and Wind Speed</h1>
+  <input id="location-input" type="text" placeholder="Enter a location">
+  <button onclick="getWeather()">Get Weather</button>
+  <button onclick="getLocation()">Get My Location Weather</button>
+  <button onclick="getWindSpeed()">Get Wind Speed</button>
+  <div id="weather"></div>
+  <div id="wind-speed"></div>
+  <div id="forecast"></div>
+
+  <script>
+    var apiKey = 'e0a922c6e95254b3721dd1459424df48';
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          showWeather(position);
+        }, function(error) {
+          showError(error);
+        });
+      } else {
+        alert('Geolocation is not supported by this browser.');
+      }
+    }
+
+    function showWeather(position) {
+      var lat = position.coords.latitude;
+      var lon = position.coords.longitude;
+      var weatherUrl = 'https://api.openweathermap.org/data/2.5/weather?lat=' + lat + '&lon=' + lon + '&appid=' + apiKey;
+
+      fetchWeather(weatherUrl, lat, lon);
+    }
+
+    function fetchWeather(url, lat, lon) {
+      fetch(url)
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          document.getElementById('weather').innerHTML = `
+            <h3>Weather in ${data.name}</h3>
+            <p>Temperature: ${(data.main.temp - 273.15).toFixed(2)} °C</p>
+            <p>Weather: ${data.weather[0].description}</p>
+            <p>Humidity: ${data.main.humidity}%</p>
+          `;
+
+          fetchForecast(lat, lon);
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+        });
+    }
+
+    function fetchForecast(lat, lon) {
+      var forecastUrl = 'https://api.openweathermap.org/data/2.5/onecall?lat=' + lat + '&lon=' + lon + '&exclude=current,minutely,hourly,alerts&appid=' + apiKey;
+
+      fetch(forecastUrl)
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          var forecastHTML = '<h3>7-Day Weather Forecast</h3>';
+          data.daily.forEach(function(day, index) {
+            if (index > 0) { // skip the current day
+              var date = new Date(day.dt * 1000);
+              forecastHTML += `
+                <p><strong>${date.toDateString()}</strong></p>
+                <p>Temperature: Day ${(day.temp.day - 273.15).toFixed(2)} °C, Night ${(day.temp.night - 273.15).toFixed(2)} °C</p>
+                <p>Weather: ${day.weather[0].description}</p>
+                <p>Humidity: ${day.humidity}%</p>
+              `;
+            }
+          });
+          document.getElementById('forecast').innerHTML = forecastHTML;
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+        });
+    }
+
+    function getWeather() {
+      var location = document.getElementById('location-input').value;
+      if (!location) {
+        alert('Please enter a location');
+        return;
+      }
+
+      var geocodeUrl = 'https://api.openweathermap.org/geo/1.0/direct?q=' + location + '&limit=1&appid=' + apiKey;
+
+      fetch(geocodeUrl)
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          if (data.length === 0) {
+            alert('Location not found');
+            return;
+          }
+
+          var lat = data[0].lat;
+          var lon = data[0].lon;
+          var weatherUrl = 'https://api.openweathermap.org/data/2.5/weather?lat=' + lat + '&lon=' + lon + '&appid=' + apiKey;
+
+          fetchWeather(weatherUrl, lat, lon);
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+        });
+    }
+
+    function getWindSpeed() {
+      var location = document.getElementById('location-input').value;
+      if (!location) {
+        alert('Please enter a location');
+        return;
+      }
+
+      var geocodeUrl = 'https://api.openweathermap.org/geo/1.0/direct?q=' + location + '&limit=1&appid=' + apiKey;
+
+      fetch(geocodeUrl)
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          if (data.length === 0) {
+            alert('Location not found');
+            return;
+          }
+
+          var lat = data[0].lat;
+          var lon = data[0].lon;
+          var weatherUrl = 'https://api.openweathermap.org/data/2.5/weather?lat=' + lat + '&lon=' + lon + '&appid=' + apiKey;
+
+          fetch(weatherUrl)
+            .then(function(response) {
+              return response.json();
+            })
+            .then(function(data) {
+              var windSpeed = data.wind.speed;
+              document.getElementById('wind-speed').innerHTML = `
+                <h3>Wind Speed in ${data.name}</h3>
+                <p>Wind Speed: ${windSpeed} m/s</p>
+              `;
+            })
+            .catch(function(error) {
+              console.error('Error:', error);
+            });
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+        });
+    }
+
+    function showError(error) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          alert('User denied the request for Geolocation.');
+          break;
+        case error.POSITION_UNAVAILABLE:
+          alert('Location information is unavailable.');
+          break;
+        case error.TIMEOUT:
+          alert('The request to get user location timed out.');
+          break;
+        case error.UNKNOWN_ERROR:
+          alert('An unknown error occurred.');
+          break;
+      }
+    }
+  </script>
+</body>
+</html>
